@@ -1,0 +1,121 @@
+import numpy as np
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+import warnings
+warnings.filterwarnings('ignore')
+import os
+
+import matplotlib.pyplot as plt
+
+import spacy
+nlp = spacy.load('en_core_web_sm')
+
+data_yelp = pd.read_csv("IMDB-Dataset.csv")
+print("\n Dataset Dimensions")
+print(data_yelp.shape)
+print("\n First five entries in Dataset")
+print(data_yelp.head())
+# review and sentiment
+# 0-Negative, 1-Positive for positive review
+print("Number of positive and negative reviews in dataset")
+print(data_yelp['sentiment'].value_counts())
+
+label=LabelEncoder()
+data_yelp['sentiment']=label.fit_transform(data_yelp['sentiment'])
+print(data_yelp.head())
+
+data_yelp.info()
+data_yelp.describe().transpose()
+count =data_yelp.isnull().sum().sort_values(ascending =False)
+percentage=((data_yelp.isnull().sum()/len(data_yelp)*100)).sort_values(ascending=False)
+missing_data=pd.concat([count, percentage],axis=1,
+keys=['Count','Percentage'])
+
+print('Count and Percentage of missing values for the columns:')
+missing_data
+
+
+import matplotlib.pyplot as plt
+print('Percentage for default \n')
+print(round(data_yelp.Is_Response.value_counts(normalize=True)*100,2))
+(round(data_yelp.Is_Response.value_counts(normalize=True)*100,2).plot(kind='bar'))
+plt.title('Percentage distribution by review type')
+plt.show()
+
+
+import re
+import string
+def text_clean_1(text):
+    text=text.lower()
+    text=re.sub('\[.*?\]','',text)
+    text=re.sub('[%s]' %re.escape(string.punctuation),'',text)
+    text=re.sub('\w*\d\w*','',text)
+    return text
+
+cleaned1=lambda  x:text_clean_1(x)
+
+
+def text_clean_2(text):
+    text=re.sub('['' ""]', '',text)
+    text=re.sub('\n','',text)
+    return text
+cleaned2=lambda x:text_clean_2(x)
+
+data_yelp['cleaned_description']=pd.DataFrame(data_yelp.Description.apply(cleaned1))
+data_yelp.head(10)
+
+
+from sklearn.model_selection import train_test_split
+Independent_var=data_yelp.cleaned_description_new
+Dependent_var=data_yelp.Is_Response
+
+IV_train,IV_test,DV_train,DV_test=train_test_split(Independent_var,Dependent_var,test_size=0.1,random_state=225)
+print('IV_train :',len(IV_train))
+print('IV_test :',len(IV_test))
+print('DV_train :',len(DV_train))
+print('DV_test :',len(DV_test))
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+tvec=TfidfVectorizer
+clf2=LogisticRegression(solver='lbfgs')
+from sklearn.pipeline import Pipeline
+
+model =Pipeline([('vectorizer',tvec),('classifier',clf2)])
+model.fit(IV_test,DV_train)
+
+from sklearn.metrics import confusion_matrix
+predictions=model.predict(IV_test)
+confusion_matrix(predictions,DV_test)
+
+
+from sklearn.metrics import accuracy_score, precision_score,recall_score
+
+print("Accuracy : ",accuracy_score(predictions,DV_test))
+print("Precision :",precision_score(predictions,DV_test,average='weighted'))
+print("Recall :",recall_score(predictions,DV_test,average='weighted'))
+
+example=["I am unhappy"]
+result=model.predict(example)
+print(result)
+
+
+
+#X=data_yelp['review']
+#Y=data_yelp['sentiment']
+
+
+
+
+
+#X_train , X_test, Y_train, Y_test= train_test_split(X,Y , test_size=0.2, random_state=101)
+#X_train.shape, X_test.shape, Y_train.shape, Y_test.shape
+
+#mnb=MultinomialNB
+#mnb.fit(X_train, Y_train)
+
+#pred=mnb.predict(X_test)
+
+#print(accuracy_score(Y_test,pred))
+#print(confusion_matrix(Y_test,pred))
+#print(classification_report(Y_test,pred))
